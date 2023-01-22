@@ -1,12 +1,11 @@
 const express = require('express')
-const {
-    connectToDb,
-    getDb
-} = require('./db')
+const { ObjectId } = require('mongodb')
+const { connectToDb, getDb } = require('./db')
 
 const PORT = 3000;
 
 const app = express();
+app.use(express.json())
 
 let db;
 
@@ -21,6 +20,10 @@ connectToDb((err) => {
     }
 })
 
+const handleError = (res, error) => {
+    res.status(500).json({error})
+}
+
 app.get('/movies', (req, res) => {
     const movies = [];
 
@@ -32,23 +35,72 @@ app.get('/movies', (req, res) => {
 
             res.json(movies)
         })
-        .catch(() => {
-            res.status(500)
-                .json({
-                    error: "Something went wrong..."
-                })
-        })
-})
-app.get('/pidori', (req, res) => {
-    res.writeHead(200, {
-        'Content-Type': 'text/html; charset=utf-8'
-    });
-    res.end('<h1>Пидоры ёбаные ненавижу вас сукаа!11!!!</h1>')
+        .catch(() => handleError(res, "Error"))
 })
 
-app.get('/anya', (req, res) => {
+app.get('/movies/:id', (req, res) => {
+    if(ObjectId.isValid(req.params.id)) {
+        db.collection('movies')
+            .findOne({_id: ObjectId(req.params.id)})
+            .then((doc) => {
+                res.status(200)
+                .json(doc)
+            })
+            .catch(() => handleError(res, "Error"))
+    } else {
+        handleError(res, "Wrong id")
+    }
+})
+
+app.get('/liya', (req, res) => {
     res.writeHead(200, {
-        'Content-Type': 'text/html; charset=utf-8'
-    });
-    res.end('<h1>Привет, Аня <3</h1>')
+        'Content-Type': "text/html;charset=utf-8"
+    })
+    res.end(`<img src="https://i.imgur.com/GUqd2YO.png"/>`)
+})
+
+app.delete('/movies/:id', (req, res) => {
+    if(ObjectId.isValid(req.params.id)) {
+        db.collection('movies')
+            .deleteOne({_id: ObjectId(req.params.id)})
+            .then((result) => {
+                res.status(200)
+                .json(result)
+            })
+            .catch(() => handleError(res, "Error"))
+    } else {
+        handleError(res, "Wrong id")
+    }
+})
+
+app.post('/movies', (req, res) => {
+    db.collection('movies')
+    .insertOne(req.body)
+    .then((result) => {
+        res.status(201)
+        .json(result)
+    })
+    .catch(() => handleError(res, "Error POST"))
+});
+
+app.get('/liya', (req, res) => {
+    res.writeHead(200, {
+        'Content-Type': "text/html;charset=utf-8"
+    })
+    res.end(`<img src="https://i.imgur.com/GUqd2YO.png"/>`)
+})
+
+app.patch('/movies/:id', (req, res) => {
+    if(ObjectId.isValid(req.params.id)) {
+        db.collection('movies')
+        .updateOne({_id: ObjectId(req.params.id)}, {$set: req.body  })
+        .then((result) => {
+            res.status(200)
+            .json(result)
+        })
+        .catch(() => handleError(res, "Error PATCH"))
+    }
+    else {
+        handleError(res, "Invalid ID")
+    }
 })
